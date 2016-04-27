@@ -1,4 +1,3 @@
-// at video 8 React Counter Example
 import {
     createStore
 } from 'redux';
