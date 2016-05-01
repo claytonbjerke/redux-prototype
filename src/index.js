@@ -57,6 +57,28 @@ let todoApp = combineReducers({
     visibilityFilter
 });
 
+let nextTodoId = 0;
+const addTodo = (text) => {
+    return {
+        type: 'ADD_TODO',
+        id: nextTodoId++,
+        text
+    };
+};
+
+const setVisibilityFilter = (filter) => {
+    return {
+        type: 'SET_VISIBLITY_FILTER',
+        filter
+    };
+};
+
+const toggleTodo = (id) => {
+    return {
+        type: 'TOGGLE_TODO',
+        id
+    };
+};
 
 const {
     Component
@@ -82,43 +104,32 @@ const Link = ({
     );
 };
 
-class FilterLink extends Component {
-
-    componentDidMount() {
-        const {store} = this.context;
-        this.unsubscribe = store.subscribe(() =>
-            this.forceUpdate()
-        );
-    }
-
-    componentWillUnmount() {
-        this.unsubscribe();
-    }
-
-    render() {
-        const props = this.props;
-        const {store} = this.context;
-        const state = store.getState();
-        return (
-            <Link
-                active={
-                    props.filter === state.visibilityFilter
-                }
-                onClick={() =>
-                    store.dispatch({
-                        type: 'SET_VISIBLITY_FILTER',
-                        filter: props.filter
-                    })
-                }
-            >
-                {props.children}
-            </Link>
-        );
-    }
+const mapStateToLinkProps = (
+    state,
+    ownProps
+) => {
+    return {
+        active: ownProps.filter === state.visibilityFilter
+    };
 }
-FilterLink.contextTypes = {
-    store: React.PropTypes.object
+
+const mapDispatchToLinkProps = (
+    dispatch,
+    ownProps
+) => {
+    return {
+        onClick: () => {
+            dispatch(
+                setVisibilityFilter(ownProps.filter)
+            );
+        }
+    }
 };
+
+const FilterLink = connect(
+    mapStateToLinkProps,
+    mapDispatchToLinkProps
+)(Link);
 
 const Footer = () => {
     return (
@@ -166,8 +177,7 @@ const Todo = ({
     )
 };
 
-let nextTodoId = 0;
-const AddTodo = (props, {store}) => {
+let AddTodo = ({dispatch}) => {
     let input;
     return (
         <div>
@@ -176,11 +186,7 @@ const AddTodo = (props, {store}) => {
             }}/>
             <button
                 onClick={() => {
-                    store.dispatch({
-                        type: 'ADD_TODO',
-                        id: nextTodoId++,
-                        text: input.value
-                    });
+                    dispatch(addTodo(input.value));
                     input.value = '';
                 }}>
                 add todo
@@ -188,9 +194,7 @@ const AddTodo = (props, {store}) => {
         </div>
     );
 };
-AddTodo.contextTypes = {
-    store: React.PropTypes.object
-};
+AddTodo = connect()(AddTodo); // default behavior is to not subscribe to store and dispatch in second arg
 
 const getVisibleTodos = (
     todos,
@@ -208,7 +212,9 @@ const getVisibleTodos = (
     }
 };
 
-const mapStateToProps = (state) => {
+const mapStateToTodoListProps = (
+    state
+) => {
     return {
         todos: getVisibleTodos(
             state.todos,
@@ -216,18 +222,15 @@ const mapStateToProps = (state) => {
         )
     };
 };
-
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToTodoListProps = (
+    dispatch
+) => {
     return {
         onTodoClick: (id) => {
-            dispatch({
-                type: 'TOGGLE_TODO',
-                id
-            })
+            dispatch(toggleTodo(id));
         }
     };
 };
-
 const TodoList = ({
     todos,
     onTodoClick
@@ -244,10 +247,9 @@ const TodoList = ({
         </ul>
     )
 };
-
 const VisibleTodoList = connect(
-    mapStateToProps, // tells how to calculate the props through inject from current redux state
-    mapDispatchToProps // the callbacks props to inject from the dispatch func on redux store
+    mapStateToTodoListProps, // tells how to calculate the props through inject from current redux state
+    mapDispatchToTodoListProps // the callbacks props to inject from the dispatch func on redux store
 )(TodoList);
 
 const TodoApp = () => (
